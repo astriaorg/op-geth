@@ -2016,12 +2016,12 @@ func (pool *LegacyPool) ClearAstriaOrdered() {
 	pool.astria.clear()
 }
 
-func (pool *LegacyPool) AstriaOrdered() *types.Transactions {
+func (pool *LegacyPool) AstriaOrdered() []*types.Transaction {
 	// sus but whatever
 	if pool.astria == nil {
-		return &types.Transactions{}
+		return []*types.Transaction{}
 	}
-	return &pool.astria.txs
+	return pool.astria.txs
 }
 
 // validateTx checks whether a transaction is valid according to the consensus
@@ -2040,7 +2040,7 @@ func (pool *LegacyPool) RemoveTx(hash common.Hash) {
 }
 
 type astriaOrdered struct {
-	txs types.Transactions
+	txs []*types.Transaction
 }
 
 func newAstriaOrdered(txs types.Transactions) *astriaOrdered {

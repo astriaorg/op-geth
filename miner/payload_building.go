@@ -21,7 +21,6 @@ import (
 	"encoding/binary"
 	"math/big"
 	"sync"
-	"time"
 
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
@@ -106,7 +105,7 @@ func newPayload(empty *types.Block, id engine.PayloadID) *Payload {
 }
 
 // update updates the full-block with latest built version.
-func (payload *Payload) update(r *newPayloadResult, elapsed time.Duration) {
+func (payload *Payload) update(r *newPayloadResult) {
 	payload.lock.Lock()
 	defer payload.lock.Unlock()
 
@@ -133,7 +132,6 @@ func (payload *Payload) update(r *newPayloadResult, elapsed time.Duration) {
 			"gas", r.block.GasUsed(),
 			"fees", feesInEther,
 			"root", r.block.Root(),
-			"elapsed", common.PrettyDuration(elapsed),
 		)
 	}
 	payload.cond.Broadcast() // fire signal for notifying full block
@@ -223,49 +221,21 @@ func (w *worker) buildPayload(args *BuildPayloadArgs) (*Payload, error) {
 		return payload, nil
 	}
 
-	// Spin up a routine for updating the payload in background. This strategy
-	// can maximum the revenue for including transactions with highest fee.
-	go func() {
-		// Setup the timer for re-building the payload. The initial clock is kept
-		// for triggering process immediately.
-		timer := time.NewTimer(0)
-		defer timer.Stop()
-
-		// Setup the timer for terminating the process if SECONDS_PER_SLOT (12s in
-		// the Mainnet configuration) have passed since the point in time identified
-		// by the timestamp parameter.
-		endTimer := time.NewTimer(time.Second * 12)
-
-		fullParams := &generateParams{
-			timestamp:   args.Timestamp,
-			forceTime:   true,
-			parentHash:  args.Parent,
-			coinbase:    args.FeeRecipient,
-			random:      args.Random,
-			withdrawals: args.Withdrawals,
-			beaconRoot:  args.BeaconRoot,
-			noTxs:       false,
-			txs:         args.Transactions,
-			gasLimit:    args.GasLimit,
-		}
-
-		for {
-			select {
-			case <-timer.C:
-				start := time.Now()
-				r := w.getSealingBlock(fullParams)
-				if r.err == nil {
-					payload.update(r, time.Since(start))
-				}
-				timer.Reset(w.recommit)
-			case <-payload.stop:
-				log.Info("Stopping work on payload", "id", payload.id, "reason", "delivery")
-				return
-			case <-endTimer.C:
-				log.Info("Stopping work on payload", "id", payload.id, "reason", "timeout")
-				return
-			}
-		}
-	}()
+	// Get the block to update with the payload
+	params := &generateParams{
+		timestamp:   args.Timestamp,
+		forceTime:   true,
+		parentHash:  args.Parent,
+		coinbase:    args.FeeRecipient,
+		random:      args.Random,
+		withdrawals: args.Withdrawals,
+		beaconRoot:  args.BeaconRoot,
+		noTxs:       false,
+		txs:         args.Transactions,
+		gasLimit:    args.GasLimit,
+	}
+	payloadResult := w.getSealingBlock(params)
+	payload.update(payloadResult)
+	log.Info("Stopping work on payload", "id", payload.id, "reason", "delivery")
 	return payload, nil
 }

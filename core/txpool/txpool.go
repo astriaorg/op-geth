@@ -101,6 +101,20 @@ func New(gasTip *big.Int, chain BlockChain, subpools []SubPool) (*TxPool, error)
 	return pool, nil
 }
 
+func (p *TxPool) AstriaOrdered() []*types.Transaction {
+	txs := []*types.Transaction{}
+	for _, subpool := range p.subpools {
+		txs = append(txs, subpool.AstriaOrdered()...)
+	}
+	return txs
+}
+
+func (p *TxPool) ClearAstriaOrdered() {
+	for _, subpool := range p.subpools {
+		subpool.ClearAstriaOrdered()
+	}
+}
+
 // reserver is a method to create an address reservation callback to exclusively
 // assign/deassign addresses to/from subpools. This can ensure that at any point
 // in time, only a single subpool is able to manage an account, avoiding cross
