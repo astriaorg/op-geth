@@ -47,9 +47,6 @@ func (s *ExecutionServiceServer) DoBlock(ctx context.Context, req *executionv1a1
 	log.Info("DoBlock called request", "request", req)
 	prevHeadHash := common.BytesToHash(req.PrevBlockHash)
 
-	// The Engine API has been modified to use transactions from this mempool and abide by it's ordering.
-	s.eth.TxPool().SetAstriaOrdered(req.Transactions)
-
 	// Do the whole Engine API in a single loop
 	startForkChoice := &engine.ForkchoiceStateV1{
 		HeadBlockHash:      prevHeadHash,
@@ -60,6 +57,9 @@ func (s *ExecutionServiceServer) DoBlock(ctx context.Context, req *executionv1a1
 		Timestamp:             uint64(req.GetTimestamp().GetSeconds()),
 		Random:                common.Hash{},
 		SuggestedFeeRecipient: common.Address{},
+		Transactions:          req.Transactions,
+		NoTxPool:              true,
+		// TODO: set gas limit? not sure if this is possible here
 	}
 
 	fcStartResp, err := s.consensus.ForkchoiceUpdatedV1(*startForkChoice, payloadAttributes)
@@ -75,7 +75,8 @@ func (s *ExecutionServiceServer) DoBlock(ctx context.Context, req *executionv1a1
 	}
 
 	// call blockchain.InsertChain to actually execute and write the blocks to state
-	block, err := engine.ExecutableDataToBlock(*payloadResp)
+	// TODO: set "beacon root" to sequencer block hash?
+	block, err := engine.ExecutableDataToBlock(*payloadResp, nil, nil)
 	if err != nil {
 		return nil, err
 	}

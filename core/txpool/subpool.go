@@ -125,6 +125,5 @@ type SubPool interface {
 	// identified by their hashes.
 	Status(hash common.Hash) TxStatus
 
-	AstriaOrdered() []*types.Transaction
-	ClearAstriaOrdered()
+	RemoveTx(hash common.Hash)
 }

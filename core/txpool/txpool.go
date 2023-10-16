@@ -101,17 +101,9 @@ func New(gasTip *big.Int, chain BlockChain, subpools []SubPool) (*TxPool, error)
 	return pool, nil
 }
 
-func (p *TxPool) AstriaOrdered() []*types.Transaction {
-	txs := []*types.Transaction{}
+func (p *TxPool) RemoveTx(hash common.Hash) {
 	for _, subpool := range p.subpools {
-		txs = append(txs, subpool.AstriaOrdered()...)
-	}
-	return txs
-}
-
-func (p *TxPool) ClearAstriaOrdered() {
-	for _, subpool := range p.subpools {
-		subpool.ClearAstriaOrdered()
+		subpool.RemoveTx(hash)
 	}
 }
 
