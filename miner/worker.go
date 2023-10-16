@@ -1022,16 +1022,30 @@ func (w *worker) prepareWork(genParams *generateParams) (*environment, error) {
 // into the given sealing block. The transaction selection and ordering strategy can
 // be customized with the plugin in the future.
 func (w *worker) fillTransactions(interrupt *atomic.Int32, env *environment) error {
-	// Use pre ordered array of txs
-	astriaTxs := w.eth.TxPool().AstriaOrdered()
-	if len(astriaTxs) > 0 {
-		txs := types.Transactions(astriaTxs)
-		interrupt := interrupt.Load()
-		if err := w.commitAstriaTransactions(env, &txs, &interrupt); err != nil {
+	pending := w.eth.TxPool().Pending(true)
+
+	// Split the pending transactions into locals and remotes.
+	localTxs, remoteTxs := make(map[common.Address][]*txpool.LazyTransaction), pending
+	for _, account := range w.eth.TxPool().Locals() {
+		if txs := remoteTxs[account]; len(txs) > 0 {
+			delete(remoteTxs, account)
+			localTxs[account] = txs
+		}
+	}
+
+	// Fill the block with all available pending transactions.
+	if len(localTxs) > 0 {
+		txs := newTransactionsByPriceAndNonce(env.signer, localTxs, env.header.BaseFee)
+		if err := w.commitTransactions(env, txs, interrupt); err != nil {
 			return err
 		}
 	}
-	w.eth.TxPool().ClearAstriaOrdered()
+	if len(remoteTxs) > 0 {
+		txs := newTransactionsByPriceAndNonce(env.signer, remoteTxs, env.header.BaseFee)
+		if err := w.commitTransactions(env, txs, interrupt); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
