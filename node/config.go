@@ -211,6 +211,21 @@ type Config struct {
 	EnablePersonal bool `toml:"-"`
 
 	DBEngine string `toml:",omitempty"`
+
+	// GRPCHost is the host interface on which to start the gRPC server. If this
+	// field is empty, no gRPC API endpoint will be started.
+	GRPCHost string `toml:",omitempty"`
+	// GRPCPort is the TCP port number on which to start the gRPC server.
+	GRPCPort int `toml:",omitempty"`
+}
+
+// GRPCEndpoint resolves a gRPC endpoint based on the configured host interface
+// and port parameters.
+func (c *Config) GRPCEndpoint() string {
+	if c.GRPCHost == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s:%d", c.GRPCHost, c.GRPCPort)
 }
 
 // IPCEndpoint resolves an IPC endpoint based on a configured value, taking into
@@ -244,6 +259,14 @@ func (c *Config) NodeDB() string {
 		return "" // ephemeral
 	}
 	return c.ResolvePath(datadirNodeDatabase)
+}
+
+// DefaultGRPCEndpoint returns the gRPC endpoint used by default.
+// NOTE - implemented this to be consistent with DefaultHTTPEndpoint, but
+// neither are ever used
+func DefaultGRPCEndpoint() string {
+	config := &Config{GRPCHost: DefaultGRPCHost, GRPCPort: DefaultGRPCPort}
+	return config.GRPCEndpoint()
 }
 
 // DefaultIPCEndpoint returns the IPC path used by default.

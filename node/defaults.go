@@ -37,6 +37,12 @@ const (
 )
 
 const (
+	// grpc
+	DefaultGRPCHost = "[::1]" // Default host interface for the gRPC server
+	DefaultGRPCPort = 50051   // Default port for the gRPC server
+)
+
+const (
 	// Engine API batch limits: these are not configurable by users, and should cover the
 	// needs of all CLs.
 	engineAPIBatchItemLimit         = 2000
@@ -72,6 +78,9 @@ var DefaultConfig = Config{
 		NAT:        nat.Any(),
 	},
 	DBEngine: "", // Use whatever exists, will default to Pebble if non-existent and supported
+	// grpc
+	GRPCHost: DefaultGRPCHost,
+	GRPCPort: DefaultGRPCPort,
 }
 
 // DefaultDataDir is the default data directory to use for the databases and other

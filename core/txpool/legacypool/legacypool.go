@@ -241,6 +241,8 @@ type LegacyPool struct {
 	changesSinceReorg int // A counter for how many drops we've performed in-between reorg.
 
 	l1CostFn txpool.L1CostFunc // To apply L1 costs as rollup, optional field, may be nil.
+
+	astria *astriaOrdered
 }
 
 type txpoolResetRequest struct {
@@ -1983,4 +1985,70 @@ func (t *lookup) RemotesBelowTip(threshold *big.Int) types.Transactions {
 // numSlots calculates the number of slots needed for a single transaction.
 func numSlots(tx *types.Transaction) int {
 	return int((tx.Size() + txSlotSize - 1) / txSlotSize)
+}
+
+func (pool *LegacyPool) SetAstriaOrdered(rawTxs [][]byte) {
+	txs := []*types.Transaction{}
+	for idx, rawTx := range rawTxs {
+		tx := new(types.Transaction)
+		err := tx.UnmarshalBinary(rawTx)
+		if err != nil {
+			log.Warn("failed to unmarshal raw astria tx bytes", rawTx, "at index", idx, "error:", err)
+			continue
+		}
+
+		err = pool.astriaValidate(tx)
+		if err != nil {
+			log.Warn("astria tx failed validation at index", idx, "error:", err)
+			continue
+		}
+
+		txs = append(txs, tx)
+	}
+
+	pool.astria = newAstriaOrdered(types.Transactions(txs))
+}
+
+func (pool *LegacyPool) ClearAstriaOrdered() {
+	if pool.astria == nil {
+		return
+	}
+	pool.astria.clear()
+}
+
+func (pool *LegacyPool) AstriaOrdered() *types.Transactions {
+	// sus but whatever
+	if pool.astria == nil {
+		return &types.Transactions{}
+	}
+	return &pool.astria.txs
+}
+
+// validateTx checks whether a transaction is valid according to the consensus
+// rules and adheres to some heuristic limits of the local node (price and size).
+func (pool *LegacyPool) astriaValidate(tx *types.Transaction) error {
+	// TODO: is this tx considered "local"?
+	return pool.validateTx(tx, true)
+}
+
+// Remove a single transaction from the mempool.
+func (pool *LegacyPool) RemoveTx(hash common.Hash) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	pool.removeTx(hash, false, false)
+}
+
+type astriaOrdered struct {
+	txs types.Transactions
+}
+
+func newAstriaOrdered(txs types.Transactions) *astriaOrdered {
+	return &astriaOrdered{
+		txs: txs,
+	}
+}
+
+func (ao *astriaOrdered) clear() {
+	ao.txs = *&types.Transactions{}
 }
