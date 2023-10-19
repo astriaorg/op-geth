@@ -199,7 +199,7 @@ func (w *worker) buildPayload(args *BuildPayloadArgs) (*Payload, error) {
 	// In OP-Stack, the "empty" block is constructed from provided txs only, i.e. no tx-pool usage.
 	emptyParams := &generateParams{
 		timestamp:   args.Timestamp,
-		forceTime:   true,
+		forceTime:   false,
 		parentHash:  args.Parent,
 		coinbase:    args.FeeRecipient,
 		random:      args.Random,
@@ -238,7 +238,7 @@ func (w *worker) buildPayload(args *BuildPayloadArgs) (*Payload, error) {
 
 		fullParams := &generateParams{
 			timestamp:   args.Timestamp,
-			forceTime:   true,
+			forceTime:   false,
 			parentHash:  args.Parent,
 			coinbase:    args.FeeRecipient,
 			random:      args.Random,
