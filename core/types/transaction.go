@@ -177,7 +177,6 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 // It supports legacy RLP transactions and EIP2718 typed transactions.
 func (tx *Transaction) UnmarshalBinary(b []byte) error {
 	if len(b) > 0 && b[0] > 0x7f {
-		fmt.Println("legacy tx")
 		// It's a legacy transaction.
 		var data LegacyTx
 		err := rlp.DecodeBytes(b, &data)
