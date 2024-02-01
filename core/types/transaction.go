@@ -19,7 +19,6 @@ package types
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"math/big"
 	"sync/atomic"
@@ -209,7 +208,6 @@ func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
 	case BlobTxType:
 		inner = new(BlobTx)
 	case DepositTxType:
-		fmt.Println("decodeTyped DepositTxType")
 		inner = new(DepositTx)
 	default:
 		return nil, ErrTxTypeNotSupported
