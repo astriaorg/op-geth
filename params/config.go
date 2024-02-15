@@ -375,11 +375,12 @@ type ChainConfig struct {
 	Optimism *OptimismConfig `json:"optimism,omitempty"`
 
 	// Astria Specific Configuration
-	AstriaOverrideGenesisExtraData       bool          `json:"astriaOverrideGenesisExtraData,omitempty"`
-	AstriaExtraDataOverride              hexutil.Bytes `json:"astriaExtraDataOverride,omitempty"`
-	AstriaSequencerInitialHeight         *big.Int      `json:"astriaDequencerInitialHeight,omitempty"`
-	AstriaDataAvailabilityInitialHeight  *big.Int      `json:"astriaDataAvailabilityInitialHeight,omitempty"`
-	AstriaDataAvailabilityHeightVariance *big.Int      `json:"astriaDataAvailabilityHeightVariance,omitempty"`
+	AstriaOverrideGenesisExtraData bool          `json:"astriaOverrideGenesisExtraData,omitempty"`
+	AstriaExtraDataOverride        hexutil.Bytes `json:"astriaExtraDataOverride,omitempty"`
+	AstriaRollupName               string        `json:"astriaRollupName,omitempty"`
+	AstriaSequencerInitialHeight   uint32        `json:"astriaSequencerInitialHeight"`
+	AstriaCelestiaInitialHeight    uint32        `json:"astriaCelestiaInitialHeight"`
+	AstriaCelestiaHeightVariance   uint32        `json:"astriaCelestiaHeightVariance,omitempty"`
 }
 
 func (c *ChainConfig) AstriaExtraData() []byte {
@@ -389,9 +390,10 @@ func (c *ChainConfig) AstriaExtraData() []byte {
 
 	// create default extradata
 	extra, _ := rlp.EncodeToBytes([]interface{}{
+		c.AstriaRollupName,
 		c.AstriaSequencerInitialHeight,
-		c.AstriaDataAvailabilityInitialHeight,
-		c.AstriaDataAvailabilityHeightVariance,
+		c.AstriaCelestiaInitialHeight,
+		c.AstriaCelestiaHeightVariance,
 	})
 	if uint64(len(extra)) > MaximumExtraDataSize {
 		log.Warn("Miner extra data exceed limit", "extra", hexutil.Bytes(extra), "limit", MaximumExtraDataSize)
