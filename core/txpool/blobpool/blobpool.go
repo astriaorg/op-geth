@@ -330,6 +330,18 @@ func New(config Config, chain BlockChain) *BlobPool {
 	}
 }
 
+func (p *BlobPool) RemoveTx(hash common.Hash) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	if id, ok := p.lookup[hash]; ok {
+		if err := p.store.Delete(id); err != nil {
+			log.Error("Failed to delete blob transaction", "hash", hash, "err", err)
+		}
+		delete(p.lookup, hash)
+	}
+}
+
 // Filter returns whether the given transaction can be consumed by the blob pool.
 func (p *BlobPool) Filter(tx *types.Transaction) bool {
 	return tx.Type() == types.BlobTxType

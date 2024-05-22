@@ -65,6 +65,9 @@ type Node struct {
 	inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
 
 	databases map[*closeTrackingDB]struct{} // All open databases
+
+	// grpc
+	grpcServerHandler *GRPCServerHandler // Stores information about the grpc server
 }
 
 const (
@@ -275,6 +278,12 @@ func (n *Node) openEndpoints() error {
 		n.stopRPC()
 		n.server.Stop()
 	}
+	// start GRPC endpoints
+	err = n.startGRPC()
+	if err != nil {
+		n.log.Error("failed to start gRPC endpoints", "err", err)
+		n.stopGRPC()
+	}
 	return err
 }
 
@@ -304,10 +313,43 @@ func (n *Node) stopServices(running []Lifecycle) error {
 	// Stop p2p networking.
 	n.server.Stop()
 
+	// Stop GRPC server
+	n.stopGRPC()
+
 	if len(failure.Services) > 0 {
 		return failure
 	}
 	return nil
+}
+
+// RegisterGRPCServer registers a gRPC server on the node.
+// This allows us to control grpc server startup and shutdown from the node.
+func (n *Node) RegisterGRPCServer(handler *GRPCServerHandler) {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+
+	if n.state != initializingState {
+		panic("can't register gRPC server on running/stopped node")
+	}
+
+	n.grpcServerHandler = handler
+}
+
+func (n *Node) startGRPC() error {
+	if n.grpcServerHandler != nil {
+		// start the server
+		if err := n.grpcServerHandler.Start(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (n *Node) stopGRPC() {
+	if n.grpcServerHandler != nil {
+		n.grpcServerHandler.Stop()
+	}
 }
 
 func (n *Node) openDataDir() error {
@@ -668,6 +710,11 @@ func (n *Node) KeyStoreDir() string {
 // AccountManager retrieves the account manager used by the protocol stack.
 func (n *Node) AccountManager() *accounts.Manager {
 	return n.accman
+}
+
+// GRPCEndpoint returns the URL of the GRPC server.
+func (n *Node) GRPCEndpoint() string {
+	return "http://" + n.grpcServerHandler.endpoint
 }
 
 // IPCEndpoint retrieves the current IPC endpoint used by the protocol stack.

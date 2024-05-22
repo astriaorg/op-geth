@@ -493,12 +493,18 @@ func (g *Genesis) ToBlock() *types.Block {
 	} else if root, err = g.Alloc.deriveHash(); err != nil {
 		panic(err)
 	}
+
+	extraData := g.ExtraData
+	if g.Config.AstriaOverrideGenesisExtraData {
+		extraData = g.Config.AstriaExtraData()
+	}
+
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),
 		Nonce:      types.EncodeNonce(g.Nonce),
 		Time:       g.Timestamp,
 		ParentHash: g.ParentHash,
-		Extra:      g.ExtraData,
+		Extra:      extraData,
 		GasLimit:   g.GasLimit,
 		GasUsed:    g.GasUsed,
 		BaseFee:    g.BaseFee,
